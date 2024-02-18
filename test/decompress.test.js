@@ -10,7 +10,7 @@ describe('snappy uncompress', () => {
 
     // Load the WASM module
     const snappyModule = await WebAssembly.instantiate(new Uint8Array(wasmBuffer), {})
-    const snappy = snappyModule.instance.exports.snappy_uncompress
+    const { memory, uncompress } = snappyModule.instance.exports
 
     const compressed = new Uint8Array([
       0x0a, 0x24, 0x68, 0x79, 0x70, 0x65, 0x72, 0x70, 0x61, 0x72, 0x61, 0x6d
@@ -18,8 +18,6 @@ describe('snappy uncompress', () => {
     const expected = 'hyperparam'
 
     // WASM memory
-    const { memory } = snappyModule.instance.exports
-
     if (memory.buffer.byteLength < compressed.length + expected.length) {
       // TODO: memory.grow(pagesToGrow)
       throw new Error('Memory buffer is too small')
@@ -29,8 +27,8 @@ describe('snappy uncompress', () => {
     const buffer = new Uint8Array(memory.buffer)
     buffer.set(compressed)
 
-    // Call wasm snappy_uncompress function
-    const result = snappy(0, compressed.length, compressed.length, expected.length)
+    // Call wasm snappy uncompress function
+    const result = uncompress(0, compressed.length, compressed.length, expected.length)
     expect(result).toBe(0)
 
     // Get uncompressed data from WASM memory

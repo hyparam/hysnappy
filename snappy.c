@@ -446,7 +446,7 @@ static void decompress_all_tags(struct snappy_decompressor *d, struct writer *wr
 /**
  * Uncompress a snappy compressed buffer. Return 0 on success.
  */
-int snappy_uncompress(const char *compressed, size_t compressed_length, char *uncompressed, size_t uncompressed_length) {
+int uncompress(const char *compressed, size_t compressed_length, char *uncompressed) {
 	struct source input = {
 		.ptr = compressed,
 		.left = compressed_length
@@ -461,14 +461,12 @@ int snappy_uncompress(const char *compressed, size_t compressed_length, char *un
 	init_snappy_decompressor(&decompressor, &input);
 
 	// Read uncompressed length from header
-	uint32_t uncompressed_len = 0;
-	if (!read_uncompressed_length(&decompressor, &uncompressed_len))
+	uint32_t uncompressed_length = 0;
+	if (!read_uncompressed_length(&decompressor, &uncompressed_length))
 		return -1;
-	if (uncompressed_len != uncompressed_length)
-		return -2;
 	// Protect against possible DoS attack
 	if ((uint64_t) (uncompressed_length) > max_len)
-		return -3;
+		return -2;
 
 	output.op_limit = output.op + uncompressed_length;
 
@@ -478,9 +476,9 @@ int snappy_uncompress(const char *compressed, size_t compressed_length, char *un
 	exit_snappy_decompressor(&decompressor);
 
 	if (!decompressor.eof)
-		return -4;
+		return -3;
 	if (output.op_limit != output.op)
-		return -5;
+		return -4;
 
 	return 0;
 }
