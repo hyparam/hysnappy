@@ -1,6 +1,35 @@
+#include <endian.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
+
+#define get_unaligned_memcpy(x) ({ \
+		typeof(*(x)) _ret; \
+		memcpy(&_ret, (x), sizeof(*(x))); \
+		_ret; })
+#define put_unaligned_memcpy(v,x) ({ \
+		typeof((v)) _v = (v); \
+		memcpy((x), &_v, sizeof(*(x))); })
+
+#define get_unaligned get_unaligned_memcpy
+#define put_unaligned put_unaligned_memcpy
+#define get_unaligned64 get_unaligned_memcpy
+#define put_unaligned64 put_unaligned_memcpy
+
+#define get_unaligned_le32(x) (le32toh(get_unaligned((uint32_t *)(x))))
+
+#define unlikely(x) __builtin_expect((x), 0)
+
+#define min_t(t,x,y) ((x) < (y) ? (x) : (y))
+
+#define UNALIGNED_LOAD32(_p) get_unaligned((uint32_t *)(_p))
+#define UNALIGNED_LOAD64(_p) get_unaligned64((uint64_t *)(_p))
+
+#define UNALIGNED_STORE32(_p, _val) put_unaligned(_val, (uint32_t *)(_p))
+#define UNALIGNED_STORE64(_p, _val) put_unaligned64(_val, (uint64_t *)(_p))
+
+#define kmax_increment_copy_overflow  10
 
 struct source {
 	const char *ptr;
@@ -82,6 +111,16 @@ static const uint16_t char_table[256] = {
 	0x1801, 0x0f0a, 0x103f, 0x203f, 0x2001, 0x0f0b, 0x1040, 0x2040
 };
 
+static inline const char *peek(struct source *s, size_t * len) {
+	*len = s->left;
+	return s->ptr;
+}
+
+static inline void skip(struct source *s, size_t n) {
+	s->left -= n;
+	s->ptr += n;
+}
+
 static void init_snappy_decompressor(struct snappy_decompressor *d, struct source *input) {
 	d->input = input;
 	d->ip = NULL;
@@ -90,8 +129,103 @@ static void init_snappy_decompressor(struct snappy_decompressor *d, struct sourc
 	d->eof = false;
 }
 
-static bool refill_tag(struct snappy_decompressor *d)
-{
+static void exit_snappy_decompressor(struct snappy_decompressor *d) {
+	skip(d->input, d->peeked);
+}
+
+/*
+ * This can be more efficient than UNALIGNED_LOAD64 + UNALIGNED_STORE64
+ * on some platforms, in particular ARM.
+ * 
+ * TODO: Does this matter for WASM?
+ */
+static inline void unaligned_copy64(const void *src, void *dst) {
+	if (sizeof(void *) == 8) {
+		UNALIGNED_STORE64(dst, UNALIGNED_LOAD64(src));
+	} else {
+		const char *src_char = (const char *)(src);
+		char *dst_char = (char *)(dst);
+
+		UNALIGNED_STORE32(dst_char, UNALIGNED_LOAD32(src_char));
+		UNALIGNED_STORE32(dst_char + 4, UNALIGNED_LOAD32(src_char + 4));
+	}
+}
+
+static inline void incremental_copy_fast_path(const char *src, char *op, size_t len) {
+	while (op - src < 8) {
+		unaligned_copy64(src, op);
+		len -= op - src;
+		op += op - src;
+	}
+	while (len > 0) {
+		unaligned_copy64(src, op);
+		src += 8;
+		op += 8;
+		len -= 8;
+	}
+}
+
+/*
+ * Copy "len" bytes from "src" to "op", one byte at a time.  Used for
+ *  handling COPY operations where the input and output regions may
+ * overlap.  For example, suppose:
+ *    src    == "ab"
+ *    op     == src + 2
+ *    len    == 20
+ * After IncrementalCopy(src, op, len), the result will have
+ * eleven copies of "ab"
+ *    ababababababababababab
+ * Note that this does not match the semantics of either memcpy()
+ * or memmove().
+ */
+static inline void incremental_copy(const char *src, char *op, size_t len) {
+	do {
+		*op++ = *src++;
+	} while (--len > 0);
+}
+
+static inline bool writer_append_from_self(struct writer *w, uint32_t offset, uint32_t len) {
+	char *const op = w->op;
+	const uint32_t space_left = w->op_limit - op;
+
+	if (op - w->base <= offset - 1u)	/* -1u catches offset==0 */
+		return false;
+	if (len <= 16 && offset >= 8 && space_left >= 16) {
+		/* Fast path, used for the majority (70-80%) of dynamic
+		 * invocations. */
+		unaligned_copy64(op - offset, op);
+		unaligned_copy64(op - offset + 8, op + 8);
+	} else {
+		if (space_left >= len + kmax_increment_copy_overflow) {
+			incremental_copy_fast_path(op - offset, op, len);
+		} else {
+			if (space_left < len) {
+				return false;
+			}
+			incremental_copy(op - offset, op, len);
+		}
+	}
+
+	w->op = op + len;
+	return true;
+}
+
+static inline bool writer_append(struct writer *w, const char *ip, uint32_t len) {
+	char *const op = w->op;
+	const uint32_t space_left = w->op_limit - op;
+	if (space_left < len)
+		return false;
+	memcpy(op, ip, len);
+	w->op = op + len;
+	return true;
+}
+
+/* Called after decompression */
+static inline bool writer_check_length(struct writer *w) {
+	return w->op == w->op_limit;
+}
+
+static bool refill_tag(struct snappy_decompressor *d) {
 	const char *ip = d->ip;
 
 	if (ip == d->ip_limit) {
@@ -108,11 +242,9 @@ static bool refill_tag(struct snappy_decompressor *d)
 	}
 
 	/* Read the tag character */
-	DCHECK_LT(ip, d->ip_limit);
 	const unsigned char c = *(const unsigned char *)(ip);
 	const uint32_t entry = char_table[c];
 	const uint32_t needed = (entry >> 11) + 1;	/* +1 byte for 'c' */
-	DCHECK_LE(needed, sizeof(d->scratch));
 
 	/* Read more bytes from reader if needed */
 	uint32_t nbuf = d->ip_limit - ip;
@@ -137,7 +269,6 @@ static bool refill_tag(struct snappy_decompressor *d)
 			nbuf += to_add;
 			skip(d->input, to_add);
 		}
-		DCHECK_EQ(nbuf, needed);
 		d->ip = d->scratch;
 		d->ip_limit = d->scratch + needed;
 	} else if (nbuf < 5) {
@@ -155,6 +286,19 @@ static bool refill_tag(struct snappy_decompressor *d)
 		d->ip = ip;
 	}
 	return true;
+}
+
+static inline bool writer_try_fast_append(struct writer *w, const char *ip, uint32_t available_bytes, uint32_t len) {
+	char *const op = w->op;
+	const int space_left = w->op_limit - op;
+	if (len <= 16 && available_bytes >= 16 && space_left >= 16) {
+		/* Fast path, used for the majority (~95%) of invocations */
+		unaligned_copy64(ip, op);
+		unaligned_copy64(ip + 8, op + 8);
+		w->op = op + len;
+		return true;
+	}
+	return false;
 }
 
 /*
@@ -193,7 +337,6 @@ static void decompress_all_tags(struct snappy_decompressor *d, struct writer *wr
 			uint32_t literal_length = (c >> 2) + 1;
 			if (writer_try_fast_append(writer, ip, d->ip_limit - ip,
 						   literal_length)) {
-				DCHECK_LT(literal_length, 61);
 				ip += literal_length;
 				MAYBE_REFILL();
 				continue;
@@ -272,7 +415,7 @@ int snappy_uncompress(const char *compressed, size_t compressed_length, char *un
 	decompress_all_tags(&decompressor, &output);
 
 	exit_snappy_decompressor(&decompressor);
-	if (decompressor.eof && writer_check_length(output))
+	if (decompressor.eof && writer_check_length(&output))
 		return 0;
 
 	return -1;
