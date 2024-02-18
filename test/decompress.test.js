@@ -17,11 +17,24 @@ describe('snappy uncompress', () => {
     ])
     const expected = 'hyperparam'
 
-    const uncompressed = new Uint8Array(new ArrayBuffer(expected.length))
+    // WASM memory
+    const { memory } = snappyModule.instance.exports
+
+    if (memory.buffer.byteLength < compressed.length + expected.length) {
+      // TODO: memory.grow(pagesToGrow)
+      throw new Error('Memory buffer is too small')
+    }
+
+    // Copy the compressed data to WASM memory
+    const buffer = new Uint8Array(memory.buffer)
+    buffer.set(compressed)
 
     // Call wasm snappy_uncompress function
-    const result = snappy(compressed, compressed.length, uncompressed, uncompressed.length)
+    const result = snappy(0, compressed.length, compressed.length, expected.length)
     expect(result).toBe(0)
+
+    // Get uncompressed data from WASM memory
+    const uncompressed = buffer.slice(compressed.length, compressed.length + expected.length)
 
     // Convert the result from WASM memory to a JavaScript string or suitable format for comparison
     const uncompressedResult = new TextDecoder().decode(uncompressed)
