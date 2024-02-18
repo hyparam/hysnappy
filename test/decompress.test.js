@@ -11,11 +11,22 @@ describe('snappy uncompress', () => {
 
     // Call wasm snappy uncompress function
     await snappyUncompress(compressed, output)
-
-    // Convert the result from WASM memory to a JavaScript string or suitable format for comparison
-    const uncompressedResult = new TextDecoder().decode(output)
+    const result = new TextDecoder().decode(output)
 
     // Assert the uncompressed data is as expected
-    expect(uncompressedResult).toBe(expected)
+    expect(result).toBe(expected)
+  })
+
+  it('decompresses an empty string correctly', async () => {
+    const compressed = new Uint8Array([0x00])
+    const output = new Uint8Array(0)
+    const expected = ''
+
+    // Call wasm snappy uncompress function
+    await snappyUncompress(compressed, output)
+    const result = new TextDecoder().decode(output)
+
+    // Assert the uncompressed data is as expected
+    expect(result).toBe(expected)
   })
 })
