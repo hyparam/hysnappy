@@ -2,4 +2,4 @@
 node_modules
 package-lock.json
 snappy.wasm
-snappy.js
+main

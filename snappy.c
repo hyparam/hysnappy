@@ -1,6 +1,6 @@
 #include <stdbool.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 void *memcpy(void *dest, const void *src, size_t n) {
     char *d = dest;
@@ -253,11 +253,6 @@ static inline bool writer_append(struct writer *w, const char *ip, uint32_t len)
 	return true;
 }
 
-/* Called after decompression */
-static inline bool writer_check_length(struct writer *w) {
-	return w->op == w->op_limit;
-}
-
 static bool refill_tag(struct snappy_decompressor *d) {
 	const char *ip = d->ip;
 
@@ -451,7 +446,7 @@ int snappy_uncompress(const char *compressed, size_t compressed_length, char *un
 
 	if (!decompressor.eof)
 		return -2;
-	if (!writer_check_length(&output))
+	if (output.op_limit != output.op)
 		return -3;
 
 	return 0;
