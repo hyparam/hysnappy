@@ -22,7 +22,10 @@ await snappyUncompress(compressed, output)
 
 ## Development
 
-Compiled from C to WASM using `clang`. Run `make` to build from source.
+Run `make` to build from source.
+
+Compiles from `snappy.c` to `hysnappy.wasm` using `clang`.
+Then encodes `hysnappy.wasm` as base64 to `hysnappy.wasm.base64`, and inserts the base64 string into `hysnappy.js` for distribution.
 
 ## References
 

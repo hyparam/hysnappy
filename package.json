@@ -19,8 +19,7 @@
   "main": "hysnappy.js",
   "files": [
     "hysnappy.d.ts",
-    "hysnappy.js",
-    "hysnappy.wasm"
+    "hysnappy.js"
   ],
   "type": "module",
   "types": "hysnappy.d.ts",
