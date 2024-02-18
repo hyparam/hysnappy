@@ -6,7 +6,7 @@ snappy.js: snappy.c wasm.c
 		-Wl,--no-entry \
 		-o snappy.wasm snappy.c
 
-main: snappy.c
+main: main.c snappy.c
 	clang -o main main.c snappy.c
 
 clean:

@@ -76,17 +76,17 @@ struct writer {
 };
 
 struct snappy_decompressor {
-	struct source *input;	/* Underlying source of bytes to decompress */
-	const char *ip;		/* Points to next buffered byte */
-	const char *ip_limit;	/* Points just past buffered bytes */
-	uint32_t peeked;		/* Bytes peeked from reader (need to skip) */
-	bool eof;		/* Hit end of input without an error? */
-	char scratch[5];	/* Temporary buffer for peekfast boundaries */
+	struct source *input; // Underlying source of bytes to decompress
+	const char *ip; // Points to next buffered byte
+	const char *ip_limit; // Points just past buffered bytes
+	uint32_t peeked; // Bytes peeked from reader (need to skip)
+	bool eof; // Hit end of input without an error?
+	char scratch[5]; // Temporary buffer for peekfast boundaries
 };
 
 enum {
 	LITERAL = 0,
-	COPY_1_BYTE_OFFSET = 1,	/* 3 bit length + 3 bits of offset in opcode */
+	COPY_1_BYTE_OFFSET = 1, // 3 bit length + 3 bits of offset in opcode
 	COPY_2_BYTE_OFFSET = 2,
 	COPY_4_BYTE_OFFSET = 3
 };
@@ -167,10 +167,38 @@ static void exit_snappy_decompressor(struct snappy_decompressor *d) {
 }
 
 /*
+ * Read the uncompressed length stored at the start of the compressed data.
+ * On succcess, stores the length in *result and returns true.
+ * On failure, returns false.
+ *
+ * Length is encoded in 1..5 bytes
+ */
+static bool read_uncompressed_length(struct snappy_decompressor *d, uint32_t * result) {
+	*result = 0;
+	uint32_t shift = 0;
+	while (true) {
+		if (shift >= 32)
+			return false;
+		size_t n;
+		const char *ip = peek(d->input, &n);
+		if (n == 0)
+			return false;
+		const unsigned char c = *(const unsigned char *)(ip);
+		skip(d->input, 1);
+		*result |= (uint32_t) (c & 0x7f) << shift;
+		if (c < 128) {
+			break;
+		}
+		shift += 7;
+	}
+	return true;
+}
+
+/*
  * This can be more efficient than UNALIGNED_LOAD64 + UNALIGNED_STORE64
  * on some platforms, in particular ARM.
  * 
- * TODO: Does this matter for WASM?
+ * TODO: Does alignment matter for WASM?
  */
 static inline void unaligned_copy64(const void *src, void *dst) {
 	if (sizeof(void *) == 8) {
@@ -221,11 +249,10 @@ static inline bool writer_append_from_self(struct writer *w, uint32_t offset, ui
 	char *const op = w->op;
 	const uint32_t space_left = w->op_limit - op;
 
-	if (op - w->base <= offset - 1u)	/* -1u catches offset==0 */
+	if (op - w->base <= offset - 1u) // -1u catches offset==0
 		return false;
 	if (len <= 16 && offset >= 8 && space_left >= 16) {
-		/* Fast path, used for the majority (70-80%) of dynamic
-		 * invocations. */
+		// Fast path, used for the majority (70-80%) of dynamic invocations
 		unaligned_copy64(op - offset, op);
 		unaligned_copy64(op - offset + 8, op + 8);
 	} else {
@@ -258,8 +285,8 @@ static bool refill_tag(struct snappy_decompressor *d) {
 
 	if (ip == d->ip_limit) {
 		size_t n;
-		/* Fetch a new fragment from the reader */
-		skip(d->input, d->peeked); /* All peeked bytes are used up */
+		// Fetch a new fragment from the reader
+		skip(d->input, d->peeked); // All peeked bytes are used up
 		ip = peek(d->input, &n);
 		d->peeked = n;
 		if (n == 0) {
@@ -272,9 +299,9 @@ static bool refill_tag(struct snappy_decompressor *d) {
 	/* Read the tag character */
 	const unsigned char c = *(const unsigned char *)(ip);
 	const uint32_t entry = char_table[c];
-	const uint32_t needed = (entry >> 11) + 1;	/* +1 byte for 'c' */
+	const uint32_t needed = (entry >> 11) + 1; // +1 byte for 'c'
 
-	/* Read more bytes from reader if needed */
+	// Read more bytes from reader if needed
 	uint32_t nbuf = d->ip_limit - ip;
 
 	if (nbuf < needed) {
@@ -285,7 +312,7 @@ static bool refill_tag(struct snappy_decompressor *d) {
 		 * read more than we need.
 		 */
 		memmove(d->scratch, ip, nbuf);
-		skip(d->input, d->peeked); /* All peeked bytes are used up */
+		skip(d->input, d->peeked); // All peeked bytes are used up
 		d->peeked = 0;
 		while (nbuf < needed) {
 			size_t length;
@@ -305,12 +332,12 @@ static bool refill_tag(struct snappy_decompressor *d) {
 		 * read past end of input
 		 */
 		memmove(d->scratch, ip, nbuf);
-		skip(d->input, d->peeked); /* All peeked bytes are used up */
+		skip(d->input, d->peeked); // All peeked bytes are used up
 		d->peeked = 0;
 		d->ip = d->scratch;
 		d->ip_limit = d->scratch + nbuf;
 	} else {
-		/* Pass pointer to buffer returned by reader. */
+		// Pass pointer to buffer returned by reader
 		d->ip = ip;
 	}
 	return true;
@@ -320,7 +347,7 @@ static inline bool writer_try_fast_append(struct writer *w, const char *ip, uint
 	char *const op = w->op;
 	const int space_left = w->op_limit - op;
 	if (len <= 16 && available_bytes >= 16 && space_left >= 16) {
-		/* Fast path, used for the majority (~95%) of invocations */
+		// Fast path, used for the majority (~95%) of invocations
 		unaligned_copy64(ip, op);
 		unaligned_copy64(ip + 8, op + 8);
 		w->op = op + len;
@@ -370,7 +397,7 @@ static void decompress_all_tags(struct snappy_decompressor *d, struct writer *wr
 				continue;
 			}
 			if (unlikely(literal_length >= 61)) {
-				/* Long literal */
+				// Long literal
 				const uint32_t literal_ll = literal_length - 60;
 				literal_length = (get_unaligned_le32(ip) & wordmask[literal_ll]) + 1;
 				ip += literal_ll;
@@ -387,7 +414,7 @@ static void decompress_all_tags(struct snappy_decompressor *d, struct writer *wr
 				avail = n;
 				d->peeked = avail;
 				if (avail == 0)
-					return;	/* Premature end of input */
+					return; // Premature end of input
 				d->ip_limit = ip + avail;
 			}
 			if (!writer_append(writer, ip, literal_length))
@@ -433,21 +460,27 @@ int snappy_uncompress(const char *compressed, size_t compressed_length, char *un
 
 	init_snappy_decompressor(&decompressor, &input);
 
-	/* Protect against possible DoS attack */
-	if ((uint64_t) (uncompressed_length) > max_len)
+	// Read uncompressed length from header
+	uint32_t uncompressed_len = 0;
+	if (!read_uncompressed_length(&decompressor, &uncompressed_len))
 		return -1;
+	if (uncompressed_len != uncompressed_length)
+		return -2;
+	// Protect against possible DoS attack
+	if ((uint64_t) (uncompressed_length) > max_len)
+		return -3;
 
 	output.op_limit = output.op + uncompressed_length;
 
-	/* Process the entire input */
+	// Decompress from input to output
 	decompress_all_tags(&decompressor, &output);
 
 	exit_snappy_decompressor(&decompressor);
 
 	if (!decompressor.eof)
-		return -2;
+		return -4;
 	if (output.op_limit != output.op)
-		return -3;
+		return -5;
 
 	return 0;
 }
