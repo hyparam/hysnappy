@@ -1,8 +1,41 @@
-#include <endian.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <string.h>
+
+void *memcpy(void *dest, const void *src, size_t n) {
+    char *d = dest;
+    const char *s = src;
+    while (n--) {
+        *d++ = *s++;
+    }
+    return dest;
+}
+
+void *memmove(void *dest, const void *src, size_t n) {
+    unsigned char *d = dest;
+    const unsigned char *s = src;
+
+    if (d == s) {
+        // No operation needed if source and destination are the same
+        return dest;
+    }
+
+    if (d < s || d >= s + n) {
+        // If there is no overlap, or d is entirely after s, copy from start to end
+        while (n--) {
+            *d++ = *s++;
+        }
+    } else {
+        // If there is overlap with d starting before s ends, copy from end to start
+        d += n;
+        s += n;
+        while (n--) {
+            *--d = *--s;
+        }
+    }
+
+    return dest;
+}
 
 #define get_unaligned_memcpy(x) ({ \
 		typeof(*(x)) _ret; \
@@ -17,7 +50,7 @@
 #define get_unaligned64 get_unaligned_memcpy
 #define put_unaligned64 put_unaligned_memcpy
 
-#define get_unaligned_le32(x) (le32toh(get_unaligned((uint32_t *)(x))))
+#define get_unaligned_le32(x) (get_unaligned((uint32_t *)(x)))
 
 #define unlikely(x) __builtin_expect((x), 0)
 
@@ -415,8 +448,11 @@ int snappy_uncompress(const char *compressed, size_t compressed_length, char *un
 	decompress_all_tags(&decompressor, &output);
 
 	exit_snappy_decompressor(&decompressor);
-	if (decompressor.eof && writer_check_length(&output))
-		return 0;
 
-	return -1;
+	if (!decompressor.eof)
+		return -2;
+	if (!writer_check_length(&output))
+		return -3;
+
+	return 0;
 }
