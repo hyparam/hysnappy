@@ -8,7 +8,8 @@
     "compress",
     "decompress",
     "decompression",
-    "wasm"
+    "wasm",
+    "webassembly"
   ],
   "license": "MIT",
   "repository": {
