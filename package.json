@@ -25,12 +25,14 @@
   "type": "module",
   "types": "hysnappy.d.ts",
   "scripts": {
+    "coverage": "vitest run --coverage",
     "lint": "eslint .",
     "test": "vitest run"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.23.10",
     "@types/node": "20.11.19",
+    "@vitest/coverage-v8": "1.3.0",
     "eslint": "8.56.0",
     "eslint-plugin-import": "2.29.1",
     "eslint-plugin-jsdoc": "48.1.0",
