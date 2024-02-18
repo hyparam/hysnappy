@@ -8,7 +8,7 @@ import fs from 'fs/promises'
  */
 export async function snappyUncompress(input, output) {
   // Read the WASM file
-  const wasmBuffer = await fs.readFile('./snappy.wasm')
+  const wasmBuffer = await fs.readFile('./hysnappy.wasm')
 
   // Load the WASM module
   const snappyModule = await WebAssembly.instantiate(new Uint8Array(wasmBuffer), {})

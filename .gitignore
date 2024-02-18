@@ -1,6 +1,6 @@
 .vscode
 node_modules
 package-lock.json
-snappy.wasm
+hysnappy.wasm
 main
 *.tgz

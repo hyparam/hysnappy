@@ -16,14 +16,14 @@
     "type": "git",
     "url": "git+https://github.com/hyparam/hysnappy.git"
   },
-  "main": "snappy.js",
+  "main": "hysnappy.js",
   "files": [
-    "snappy.d.ts",
-    "snappy.js",
-    "snappy.wasm"
+    "hysnappy.d.ts",
+    "hysnappy.js",
+    "hysnappy.wasm"
   ],
   "type": "module",
-  "types": "snappy.d.ts",
+  "types": "hysnappy.d.ts",
   "scripts": {
     "lint": "eslint .",
     "test": "vitest run"

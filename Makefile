@@ -1,13 +1,13 @@
 
-snappy.wasm: snappy.c wasm.c
+hysnappy.wasm: snappy.c wasm.c
 	clang --target=wasm32 \
 		-nostdlib \
 		-Wl,--export-all \
 		-Wl,--no-entry \
-		-o snappy.wasm snappy.c
+		-o hysnappy.wasm snappy.c
 
 main: main.c snappy.c
 	clang -o main main.c snappy.c
 
 clean:
-	rm -f main snappy.wasm
+	rm -f main hysnappy.wasm

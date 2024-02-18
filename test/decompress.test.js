@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { snappyUncompress } from '../snappy.js'
+import { snappyUncompress } from '../hysnappy.js'
 
 describe('snappy uncompress', () => {
   it('decompresses a compressed string correctly', async () => {
