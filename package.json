@@ -16,6 +16,13 @@
     "type": "git",
     "url": "git+https://github.com/hyparam/hysnappy.git"
   },
+  "main": "snappy.js",
+  "files": [
+    "snappy.d.ts",
+    "snappy.js",
+    "snappy.wasm"
+  ],
+  "types": "snappy.d.ts",
   "scripts": {
     "test": "vitest run"
   },

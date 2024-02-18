@@ -1,41 +1,19 @@
 import { describe, it, expect } from 'vitest'
-import fs from 'fs/promises'
-import path from 'path'
+import { snappyUncompress } from '../snappy.js'
 
 describe('snappy uncompress', () => {
   it('decompresses a compressed string correctly', async () => {
-    // Read the WASM file
-    const wasmPath = path.resolve(__dirname, '../snappy.wasm')
-    const wasmBuffer = await fs.readFile(wasmPath)
-
-    // Load the WASM module
-    const snappyModule = await WebAssembly.instantiate(new Uint8Array(wasmBuffer), {})
-    const { memory, uncompress } = snappyModule.instance.exports
-
     const compressed = new Uint8Array([
       0x0a, 0x24, 0x68, 0x79, 0x70, 0x65, 0x72, 0x70, 0x61, 0x72, 0x61, 0x6d
     ])
+    const output = new Uint8Array(10)
     const expected = 'hyperparam'
 
-    // WASM memory
-    if (memory.buffer.byteLength < compressed.length + expected.length) {
-      // TODO: memory.grow(pagesToGrow)
-      throw new Error('Memory buffer is too small')
-    }
-
-    // Copy the compressed data to WASM memory
-    const buffer = new Uint8Array(memory.buffer)
-    buffer.set(compressed)
-
     // Call wasm snappy uncompress function
-    const result = uncompress(0, compressed.length, compressed.length, expected.length)
-    expect(result).toBe(0)
-
-    // Get uncompressed data from WASM memory
-    const uncompressed = buffer.slice(compressed.length, compressed.length + expected.length)
+    await snappyUncompress(compressed, output)
 
     // Convert the result from WASM memory to a JavaScript string or suitable format for comparison
-    const uncompressedResult = new TextDecoder().decode(uncompressed)
+    const uncompressedResult = new TextDecoder().decode(output)
 
     // Assert the uncompressed data is as expected
     expect(uncompressedResult).toBe(expected)

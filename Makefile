@@ -1,5 +1,5 @@
 
-snappy.js: snappy.c wasm.c
+snappy.wasm: snappy.c wasm.c
 	clang --target=wasm32 \
 		-nostdlib \
 		-Wl,--export-all \
@@ -10,4 +10,4 @@ main: main.c snappy.c
 	clang -o main main.c snappy.c
 
 clean:
-	rm -f snappy.js snappy.wasm
+	rm -f main snappy.wasm
