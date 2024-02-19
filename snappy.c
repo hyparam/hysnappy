@@ -455,7 +455,6 @@ int uncompress(const char *compressed, size_t compressed_length, char *uncompres
 		.base = uncompressed,
 		.op = uncompressed
 	};
-	uint32_t max_len = 0xffffffff;
 	struct snappy_decompressor decompressor;
 
 	init_snappy_decompressor(&decompressor, &input);
@@ -463,10 +462,7 @@ int uncompress(const char *compressed, size_t compressed_length, char *uncompres
 	// Read uncompressed length from header
 	uint32_t uncompressed_length = 0;
 	if (!read_uncompressed_length(&decompressor, &uncompressed_length))
-		return -1;
-	// Protect against possible DoS attack
-	if ((uint64_t) (uncompressed_length) > max_len)
-		return -2;
+		return -1; // invalid uncompressed length
 
 	// Set limit for output
 	output.op_limit = output.op + uncompressed_length;
@@ -477,9 +473,9 @@ int uncompress(const char *compressed, size_t compressed_length, char *uncompres
 	exit_snappy_decompressor(&decompressor);
 
 	if (!decompressor.eof)
-		return -3;
+		return -2; // missing eof marker
 	if (output.op_limit != output.op)
-		return -4;
+		return -3; // premature end of input
 
 	return 0;
 }

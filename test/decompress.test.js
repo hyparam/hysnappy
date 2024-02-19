@@ -5,6 +5,7 @@ describe('snappy uncompress', () => {
   it('decompresses valid input correctly', async () => {
     const testCases = [
       { compressed: new Uint8Array([0x00]), expected: '' },
+      { compressed: new Uint8Array([0x01, 0x00, 0x68]), expected: 'h' },
       { compressed: new Uint8Array([0x02, 0x04, 0x68, 0x79]), expected: 'hy' },
       {
         compressed: new Uint8Array([0x03, 0x08, 0x68, 0x79, 0x70]),
@@ -54,13 +55,15 @@ describe('snappy uncompress', () => {
 
   it('throws for invalid input', () => {
     const outputArray = new Uint8Array(10)
-    expect(snappyUncompress(new Uint8Array([]), outputArray)).rejects
-      .toThrow('failed to uncompress data -1')
-    expect(snappyUncompress(new Uint8Array([0xff]), outputArray)).rejects
-      .toThrow('failed to uncompress data -1')
-    expect(snappyUncompress(new Uint8Array([0x03, 0x61]), outputArray)).rejects
-      .toThrow('failed to uncompress data -3')
-    expect(snappyUncompress(new Uint8Array([0x03, 0xf1]), outputArray)).rejects
-      .toThrow('failed to uncompress data -3')
+    expect(snappyUncompress(new Uint8Array([]), outputArray))
+      .rejects.toThrow('invalid snappy length header')
+    expect(snappyUncompress(new Uint8Array([0xff]), outputArray))
+      .rejects.toThrow('invalid snappy length header')
+    expect(snappyUncompress(new Uint8Array([0x03, 0x61]), outputArray))
+      .rejects.toThrow('missing eof marker')
+    expect(snappyUncompress(new Uint8Array([0x03, 0xf1]), outputArray))
+      .rejects.toThrow('missing eof marker')
+    expect(snappyUncompress(new Uint8Array([0x02, 0x00, 0x68]), outputArray))
+      .rejects.toThrow('premature end of input')
   })
 })
