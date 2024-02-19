@@ -212,7 +212,7 @@ static inline void unaligned_copy64(const void *src, void *dst) {
 	}
 }
 
-static inline void incremental_copy_fast_path(const char *src, char *op, size_t len) {
+static inline void incremental_copy_fast_path(const char *src, char *op, long len) {
 	while (op - src < 8) {
 		unaligned_copy64(src, op);
 		len -= op - src;
@@ -239,7 +239,7 @@ static inline void incremental_copy_fast_path(const char *src, char *op, size_t 
  * Note that this does not match the semantics of either memcpy()
  * or memmove().
  */
-static inline void incremental_copy(const char *src, char *op, size_t len) {
+static inline void incremental_copy(const char *src, char *op, long len) {
 	do {
 		*op++ = *src++;
 	} while (--len > 0);
@@ -468,6 +468,7 @@ int uncompress(const char *compressed, size_t compressed_length, char *uncompres
 	if ((uint64_t) (uncompressed_length) > max_len)
 		return -2;
 
+	// Set limit for output
 	output.op_limit = output.op + uncompressed_length;
 
 	// Decompress from input to output

@@ -22,13 +22,31 @@ describe('snappy uncompress', () => {
         compressed: new Uint8Array([0x15, 0x08, 0x68, 0x79, 0x70, 0x46, 0x03, 0x00]),
         expected: 'hyphyphyphyphyphyphyp',
       },
+      {
+        // from rowgroups.parquet
+        compressed: new Uint8Array([
+          80, 4, 1, 0, 9, 1, 0, 2, 9, 7, 4, 0, 3, 13, 8, 0, 4, 13, 8, 0, 5, 13,
+          8, 0, 6, 13, 8, 0, 7, 13, 8, 0, 8, 13, 8, 60, 9, 0, 0, 0, 0, 0, 0, 0,
+          10, 0, 0, 0, 0, 0, 0, 0,
+        ]),
+        expected: new Uint8Array([
+          1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0,
+          0, 4, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0,
+          0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0,
+          0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0,
+        ]),
+      },
     ]
 
     const futures = testCases.map(async ({ compressed, expected }) => {
       const outputArray = new Uint8Array(expected.length)
       await snappyUncompress(compressed, outputArray)
-      const outputStr = new TextDecoder().decode(outputArray)
-      expect(outputStr).toBe(expected)
+      if (typeof expected === 'string') {
+        const outputStr = new TextDecoder().decode(outputArray)
+        expect(outputStr).toBe(expected)
+      } else {
+        expect(outputArray).toEqual(expected) // Uint8Array
+      }
     })
 
     await Promise.all(futures)

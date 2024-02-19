@@ -11,7 +11,7 @@ hysnappy.wasm: snappy.c wasm.c
 		-o hysnappy.wasm snappy.c
 
 main: main.c snappy.c
-	clang -o main main.c snappy.c
+	clang -g -o main main.c snappy.c
 
 clean:
 	rm -f main hysnappy.wasm hysnappy.wasm.base64
