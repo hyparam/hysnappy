@@ -1,5 +1,7 @@
 # HySnappy
 
+![hysnappy penguin](hysnappy.jpg)
+
 [![npm](https://img.shields.io/npm/v/hysnappy)](https://www.npmjs.com/package/hysnappy)
 [![workflow status](https://github.com/hyparam/hysnappy/actions/workflows/ci.yml/badge.svg)](https://github.com/hyparam/hysnappy/actions)
 [![mit license](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
