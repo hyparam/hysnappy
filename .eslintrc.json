@@ -7,7 +7,6 @@
   "extends": [
     "eslint:recommended"
   ],
-  "ignorePatterns": ["dist/"],
   "parserOptions": {
     "ecmaVersion": 12,
     "sourceType": "module"
