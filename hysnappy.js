@@ -17,8 +17,14 @@ export async function snappyUncompress(input, output) {
   // eslint-disable-next-line prefer-destructuring
   const uncompress = snappyModule.instance.exports.uncompress
 
-  // WASM memory
-  const totalSize = input.byteLength + output.byteLength
+  // Input data is passed into wasm memory at inputStart
+  // Output data is expected to be written to wasm memory at outputStart
+  // clang uses some wasm memory, so we need to skip past that
+  const inputStart = 8192 // 8KiB
+  const outputStart = inputStart + input.byteLength
+
+  // WebAssembly memory
+  const totalSize = inputStart + input.byteLength + output.byteLength
   if (memory.buffer.byteLength < totalSize) {
     // Calculate the number of pages needed, rounding up
     const pageSize = 64 * 1024 // 64KiB per page
@@ -30,10 +36,10 @@ export async function snappyUncompress(input, output) {
 
   // Copy the compressed data to WASM memory
   const byteArray = new Uint8Array(memory.buffer)
-  byteArray.set(input)
+  byteArray.set(input, inputStart)
 
   // Call wasm uncompress function
-  const result = uncompress(0, input.byteLength, input.byteLength)
+  const result = uncompress(inputStart, input.byteLength, outputStart)
 
   // Check for errors
   if (result === -1) throw new Error('invalid snappy length header')
@@ -42,7 +48,7 @@ export async function snappyUncompress(input, output) {
   if (result) throw new Error(`failed to uncompress data ${result}`)
 
   // Get uncompressed data from WASM memory
-  const uncompressed = byteArray.slice(input.byteLength, input.byteLength + output.byteLength)
+  const uncompressed = byteArray.slice(outputStart, outputStart + output.byteLength)
 
   // Copy the uncompressed data to the output buffer
   // TODO: Return WASM memory buffer instead of copying?
