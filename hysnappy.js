@@ -18,10 +18,14 @@ export async function snappyUncompress(input, output) {
   const uncompress = snappyModule.instance.exports.uncompress
 
   // WASM memory
-  /** @type {WebAssembly.Memory} */
-  if (memory.buffer.byteLength < input.byteLength + output.byteLength) {
-    // TODO: memory.grow(pagesToGrow)
-    throw new Error('memory buffer is too small')
+  const totalSize = input.byteLength + output.byteLength
+  if (memory.buffer.byteLength < totalSize) {
+    // Calculate the number of pages needed, rounding up
+    const pageSize = 64 * 1024 // 64KiB per page
+    const currentPages = memory.buffer.byteLength / pageSize
+    const requiredPages = Math.ceil(totalSize / pageSize)
+    const pagesToGrow = requiredPages - currentPages
+    memory.grow(pagesToGrow)
   }
 
   // Copy the compressed data to WASM memory
