@@ -37,13 +37,18 @@ void *memmove(void *dest, const void *src, size_t n) {
     return dest;
 }
 
-#define get_unaligned(x) ({ \
+#define get_unaligned_memcpy(x) ({ \
 		typeof(*(x)) _ret; \
 		memcpy(&_ret, (x), sizeof(*(x))); \
 		_ret; })
-#define put_unaligned(v,x) ({ \
+#define put_unaligned_memcpy(v,x) ({ \
 		typeof((v)) _v = (v); \
 		memcpy((x), &_v, sizeof(*(x))); })
+
+#define get_unaligned get_unaligned_memcpy
+#define put_unaligned put_unaligned_memcpy
+#define get_unaligned64 get_unaligned_memcpy
+#define put_unaligned64 put_unaligned_memcpy
 
 #define get_unaligned_le32(x) (get_unaligned((uint32_t *)(x)))
 
@@ -52,10 +57,10 @@ void *memmove(void *dest, const void *src, size_t n) {
 #define min_t(t,x,y) ((x) < (y) ? (x) : (y))
 
 #define UNALIGNED_LOAD32(_p) get_unaligned((uint32_t *)(_p))
-#define UNALIGNED_LOAD64(_p) get_unaligned((uint64_t *)(_p))
+#define UNALIGNED_LOAD64(_p) get_unaligned64((uint64_t *)(_p))
 
 #define UNALIGNED_STORE32(_p, _val) put_unaligned(_val, (uint32_t *)(_p))
-#define UNALIGNED_STORE64(_p, _val) put_unaligned(_val, (uint64_t *)(_p))
+#define UNALIGNED_STORE64(_p, _val) put_unaligned64(_val, (uint64_t *)(_p))
 
 #define kmax_increment_copy_overflow  10
 
@@ -207,6 +212,20 @@ static inline void unaligned_copy64(const void *src, void *dst) {
 	}
 }
 
+static inline void incremental_copy_fast_path(const char *src, char *op, long len) {
+	while (op - src < 8) {
+		unaligned_copy64(src, op);
+		len -= op - src;
+		op += op - src;
+	}
+	while (len > 0) {
+		unaligned_copy64(src, op);
+		src += 8;
+		op += 8;
+		len -= 8;
+	}
+}
+
 /*
  * Copy "len" bytes from "src" to "op", one byte at a time.  Used for
  *  handling COPY operations where the input and output regions may
@@ -232,10 +251,20 @@ static inline bool writer_append_from_self(struct writer *w, uint32_t offset, ui
 
 	if (op - w->base <= offset - 1u) // -1u catches offset==0
 		return false;
-	if (space_left < len) {
-		return false;
+	if (len <= 16 && offset >= 8 && space_left >= 16) {
+		// Fast path, used for the majority (70-80%) of dynamic invocations
+		unaligned_copy64(op - offset, op);
+		unaligned_copy64(op - offset + 8, op + 8);
+	} else {
+		if (space_left >= len + kmax_increment_copy_overflow) {
+			incremental_copy_fast_path(op - offset, op, len);
+		} else {
+			if (space_left < len) {
+				return false;
+			}
+			incremental_copy(op - offset, op, len);
+		}
 	}
-	incremental_copy(op - offset, op, len);
 
 	w->op = op + len;
 	return true;
@@ -314,6 +343,19 @@ static bool refill_tag(struct snappy_decompressor *d) {
 	return true;
 }
 
+static inline bool writer_try_fast_append(struct writer *w, const char *ip, uint32_t available_bytes, uint32_t len) {
+	char *const op = w->op;
+	const int space_left = w->op_limit - op;
+	if (len <= 16 && available_bytes >= 16 && space_left >= 16) {
+		// Fast path, used for the majority (~95%) of invocations
+		unaligned_copy64(ip, op);
+		unaligned_copy64(ip + 8, op + 8);
+		w->op = op + len;
+		return true;
+	}
+	return false;
+}
+
 /*
  * Process the next item found in the input.
  * Returns true if successful, false on error or end of input.
@@ -348,6 +390,12 @@ static void decompress_all_tags(struct snappy_decompressor *d, struct writer *wr
 
 		if ((c & 0x3) == LITERAL) {
 			uint32_t literal_length = (c >> 2) + 1;
+			if (writer_try_fast_append(writer, ip, d->ip_limit - ip,
+						   literal_length)) {
+				ip += literal_length;
+				MAYBE_REFILL();
+				continue;
+			}
 			if (unlikely(literal_length >= 61)) {
 				// Long literal
 				const uint32_t literal_ll = literal_length - 60;
