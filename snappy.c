@@ -37,18 +37,13 @@ void *memmove(void *dest, const void *src, size_t n) {
     return dest;
 }
 
-#define get_unaligned_memcpy(x) ({ \
+#define get_unaligned(x) ({ \
 		typeof(*(x)) _ret; \
 		memcpy(&_ret, (x), sizeof(*(x))); \
 		_ret; })
-#define put_unaligned_memcpy(v,x) ({ \
+#define put_unaligned(v,x) ({ \
 		typeof((v)) _v = (v); \
 		memcpy((x), &_v, sizeof(*(x))); })
-
-#define get_unaligned get_unaligned_memcpy
-#define put_unaligned put_unaligned_memcpy
-#define get_unaligned64 get_unaligned_memcpy
-#define put_unaligned64 put_unaligned_memcpy
 
 #define get_unaligned_le32(x) (get_unaligned((uint32_t *)(x)))
 
@@ -57,10 +52,10 @@ void *memmove(void *dest, const void *src, size_t n) {
 #define min_t(t,x,y) ((x) < (y) ? (x) : (y))
 
 #define UNALIGNED_LOAD32(_p) get_unaligned((uint32_t *)(_p))
-#define UNALIGNED_LOAD64(_p) get_unaligned64((uint64_t *)(_p))
+#define UNALIGNED_LOAD64(_p) get_unaligned((uint64_t *)(_p))
 
 #define UNALIGNED_STORE32(_p, _val) put_unaligned(_val, (uint32_t *)(_p))
-#define UNALIGNED_STORE64(_p, _val) put_unaligned64(_val, (uint64_t *)(_p))
+#define UNALIGNED_STORE64(_p, _val) put_unaligned(_val, (uint64_t *)(_p))
 
 #define kmax_increment_copy_overflow  10
 
