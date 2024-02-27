@@ -4,18 +4,18 @@
  * @param {Uint8Array} input
  * @param {Uint8Array} output
  */
-export async function snappyUncompress(input, output) {
+export function snappyUncompress(input, output) {
   // Load the WASM module
-  const snappyModule = await instantiateWasm()
+  const wasm = instantiateWasm()
   // const { memory, uncompress } = snappyModule.instance.exports
   /** @type {WebAssembly.Memory} */
   // @ts-ignore
   // eslint-disable-next-line prefer-destructuring
-  const memory = snappyModule.instance.exports.memory
+  const memory = wasm.exports.memory
   /** @type {Function} */
   // @ts-ignore
   // eslint-disable-next-line prefer-destructuring
-  const uncompress = snappyModule.instance.exports.uncompress
+  const uncompress = wasm.exports.uncompress
 
   // Input data is passed into wasm memory at inputStart
   // Output data is expected to be written to wasm memory at outputStart
@@ -58,7 +58,7 @@ export async function snappyUncompress(input, output) {
 /**
  * Instantiate WASM module from a base64 string.
  *
- * @returns {Promise<WebAssembly.WebAssemblyInstantiatedSource>}
+ * @returns {WebAssembly.Instance}
  */
 function instantiateWasm() {
   const binaryString = atob(wasm64)
@@ -66,7 +66,9 @@ function instantiateWasm() {
   for (let i = 0; i < binaryString.length; i += 1) {
     byteArray[i] = binaryString.charCodeAt(i)
   }
-  return WebAssembly.instantiate(byteArray)
+  // only works for payload less than 4kb:
+  const mod = new WebAssembly.Module(byteArray)
+  return new WebAssembly.Instance(mod)
 }
 
 // Base64 encoded hysnappy.wasm
