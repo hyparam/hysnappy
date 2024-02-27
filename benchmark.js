@@ -4,7 +4,7 @@ import { snappyUncompress as uncompressWasm } from './hysnappy.js'
 
 const fileSize = 200_000_000
 
-const compressed = await time(`generate and compress ${fileSize.toLocaleString()}`, async () => {
+const compressed = time(`generate and compress ${fileSize.toLocaleString()}`, () => {
   // Generate input array with random data
   const input = new Uint8Array(fileSize)
   for (let i = 0; i < fileSize; i++) {
@@ -16,18 +16,18 @@ console.log(`compressed ${fileSize.toLocaleString()} bytes to ${compressed.lengt
 
 const output = new Uint8Array(fileSize)
 
-await timeWithStdDev('uncompress wasm', () => uncompressWasm(compressed, output))
+timeWithStdDev('uncompress wasm', () => uncompressWasm(compressed, output))
 
-// await time('uncompress snappyjs', () => uncompress(compressed, output))
+// time('uncompress snappyjs', () => uncompress(compressed, output))
 
 /**
  * @param {string} name
- * @param {() => Promise<any>} fn
- * @returns {Promise<any>}
+ * @param {() => any} fn
+ * @returns {any}
  */
-async function time(name, fn) {
+function time(name, fn) {
   const start = performance.now()
-  const output = await fn()
+  const output = fn()
   const ms = performance.now() - start
   console.log(`${name} took ${ms} ms`)
   return output
@@ -35,14 +35,14 @@ async function time(name, fn) {
 
 /**
  * @param {string} name
- * @param {() => Promise<void>} fn
+ * @param {() => void} fn
  * @param {number} iterations
  */
-async function timeWithStdDev(name, fn, iterations = 20) {
+function timeWithStdDev(name, fn, iterations = 20) {
   const times = []
   for (let i = 0; i < iterations; i++) {
     const start = performance.now()
-    await fn()
+    fn()
     const ms = performance.now() - start
     times.push(ms)
   }
