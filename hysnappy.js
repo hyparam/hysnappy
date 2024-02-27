@@ -5,54 +5,59 @@
  * @param {Uint8Array} output
  */
 export function snappyUncompress(input, output) {
-  // Load the WASM module
+  snappyUncompressor()(input, output)
+}
+
+/**
+ * Load wasm and return uncompressor function.
+ *
+ * @returns {(input: Uint8Array, output: Uint8Array) => void}
+ */
+export function snappyUncompressor() {
+  // Instantiate wasm module
   const wasm = instantiateWasm()
-  // const { memory, uncompress } = snappyModule.instance.exports
-  /** @type {WebAssembly.Memory} */
-  // @ts-ignore
-  // eslint-disable-next-line prefer-destructuring
-  const memory = wasm.exports.memory
-  /** @type {Function} */
-  // @ts-ignore
-  // eslint-disable-next-line prefer-destructuring
-  const uncompress = wasm.exports.uncompress
 
-  // Input data is passed into wasm memory at inputStart
-  // Output data is expected to be written to wasm memory at outputStart
-  // clang uses some wasm memory, so we need to skip past that
-  const inputStart = 68000 // 68 kb
-  const outputStart = inputStart + input.byteLength
+  return (input, output) => {
+    /** @type {any} */
+    const { memory, uncompress } = wasm.exports
 
-  // WebAssembly memory
-  const totalSize = inputStart + input.byteLength + output.byteLength
-  if (memory.buffer.byteLength < totalSize) {
-    // Calculate the number of pages needed, rounding up
-    const pageSize = 64 * 1024 // 64KiB per page
-    const currentPages = memory.buffer.byteLength / pageSize
-    const requiredPages = Math.ceil(totalSize / pageSize)
-    const pagesToGrow = requiredPages - currentPages
-    memory.grow(pagesToGrow)
+    // Input data is passed into wasm memory at inputStart
+    // Output data is expected to be written to wasm memory at outputStart
+    // clang uses some wasm memory, so we need to skip past that
+    const inputStart = 68000 // 68 kb
+    const outputStart = inputStart + input.byteLength
+
+    // WebAssembly memory
+    const totalSize = inputStart + input.byteLength + output.byteLength
+    if (memory.buffer.byteLength < totalSize) {
+      // Calculate the number of pages needed, rounding up
+      const pageSize = 64 * 1024 // 64KiB per page
+      const currentPages = memory.buffer.byteLength / pageSize
+      const requiredPages = Math.ceil(totalSize / pageSize)
+      const pagesToGrow = requiredPages - currentPages
+      memory.grow(pagesToGrow)
+    }
+
+    // Copy the compressed data to WASM memory
+    const byteArray = new Uint8Array(memory.buffer)
+    byteArray.set(input, inputStart)
+
+    // Call wasm uncompress function
+    const result = uncompress(inputStart, input.byteLength, outputStart)
+
+    // Check for errors
+    if (result === -1) throw new Error('invalid snappy length header')
+    if (result === -2) throw new Error('missing eof marker')
+    if (result === -3) throw new Error('premature end of input')
+    if (result) throw new Error(`failed to uncompress data ${result}`)
+
+    // Get uncompressed data from WASM memory
+    const uncompressed = byteArray.slice(outputStart, outputStart + output.byteLength)
+
+    // Copy the uncompressed data to the output buffer
+    // TODO: Return WASM memory buffer instead of copying?
+    output.set(uncompressed)
   }
-
-  // Copy the compressed data to WASM memory
-  const byteArray = new Uint8Array(memory.buffer)
-  byteArray.set(input, inputStart)
-
-  // Call wasm uncompress function
-  const result = uncompress(inputStart, input.byteLength, outputStart)
-
-  // Check for errors
-  if (result === -1) throw new Error('invalid snappy length header')
-  if (result === -2) throw new Error('missing eof marker')
-  if (result === -3) throw new Error('premature end of input')
-  if (result) throw new Error(`failed to uncompress data ${result}`)
-
-  // Get uncompressed data from WASM memory
-  const uncompressed = byteArray.slice(outputStart, outputStart + output.byteLength)
-
-  // Copy the uncompressed data to the output buffer
-  // TODO: Return WASM memory buffer instead of copying?
-  output.set(uncompressed)
 }
 
 /**

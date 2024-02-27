@@ -1,6 +1,6 @@
 
 import { compress } from 'snappyjs'
-import { snappyUncompress as uncompressWasm } from './hysnappy.js'
+import { snappyUncompressor } from './hysnappy.js'
 
 const fileSize = 200_000_000
 
@@ -16,7 +16,8 @@ console.log(`compressed ${fileSize.toLocaleString()} bytes to ${compressed.lengt
 
 const output = new Uint8Array(fileSize)
 
-timeWithStdDev('uncompress wasm', () => uncompressWasm(compressed, output))
+const snappyUncompress = snappyUncompressor()
+timeWithStdDev('uncompress wasm', () => snappyUncompress(compressed, output))
 
 // time('uncompress snappyjs', () => uncompress(compressed, output))
 
