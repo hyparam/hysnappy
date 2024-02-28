@@ -2,22 +2,23 @@
  * Uncompress a snappy compressed buffer.
  *
  * @param {Uint8Array} input
- * @param {Uint8Array} output
+ * @param {number} outputLength
+ * @returns {Uint8Array}
  */
-export function snappyUncompress(input, output) {
-  snappyUncompressor()(input, output)
+export function snappyUncompress(input, outputLength) {
+  return snappyUncompressor()(input, outputLength)
 }
 
 /**
  * Load wasm and return uncompressor function.
  *
- * @returns {(input: Uint8Array, output: Uint8Array) => void}
+ * @returns {(input: Uint8Array, outputLength: number) => Uint8Array}
  */
 export function snappyUncompressor() {
   // Instantiate wasm module
   const wasm = instantiateWasm()
 
-  return (input, output) => {
+  return (input, outputLength) => {
     /** @type {any} */
     const { memory, uncompress } = wasm.exports
 
@@ -28,7 +29,7 @@ export function snappyUncompressor() {
     const outputStart = inputStart + input.byteLength
 
     // WebAssembly memory
-    const totalSize = inputStart + input.byteLength + output.byteLength
+    const totalSize = inputStart + input.byteLength + outputLength
     if (memory.buffer.byteLength < totalSize) {
       // Calculate the number of pages needed, rounding up
       const pageSize = 64 * 1024 // 64KiB per page
@@ -52,11 +53,7 @@ export function snappyUncompressor() {
     if (result) throw new Error(`failed to uncompress data ${result}`)
 
     // Get uncompressed data from WASM memory
-    const uncompressed = byteArray.slice(outputStart, outputStart + output.byteLength)
-
-    // Copy the uncompressed data to the output buffer
-    // TODO: Return WASM memory buffer instead of copying?
-    output.set(uncompressed)
+    return byteArray.slice(outputStart, outputStart + outputLength)
   }
 }
 

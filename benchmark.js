@@ -14,12 +14,10 @@ const compressed = time(`generate and compress ${fileSize.toLocaleString()}`, ()
 })
 console.log(`compressed ${fileSize.toLocaleString()} bytes to ${compressed.length.toLocaleString()} bytes`)
 
-const output = new Uint8Array(fileSize)
-
 const snappyUncompress = snappyUncompressor()
-timeWithStdDev('uncompress wasm', () => snappyUncompress(compressed, output))
+timeWithStdDev('uncompress wasm', () => snappyUncompress(compressed, fileSize))
 
-// time('uncompress snappyjs', () => uncompress(compressed, output))
+// time('uncompress snappyjs', () => uncompress(compressed, fileSize))
 
 /**
  * @param {string} name
