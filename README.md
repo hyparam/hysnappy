@@ -9,9 +9,15 @@
 
 Snappy decompression with WebAssembly.
 
-A fast, minimal snappy decompression implementation built for WASM.
+A fast, minimal snappy decompression implementation in C built for WASM.
+
+Snappy compression was released by Google in 2011 with the goal of very high speeds and reasonable compression.
+Snappy is used in various applications.
+For example, snappy is the default compression format for [Apache Parquet](https://parquet.apache.org) files.
 
 ## Usage
+
+To decompress a `Uint8Array` with known output length:
 
 ```js
 import { snappyUncompress } from 'hysnappy'
@@ -23,12 +29,36 @@ const outputLength = 10
 const output = snappyUncompress(compressed, outputLength)
 ```
 
+## Hyparquet
+
+Hysnappy was built specifically to accelerate the the [hyparquet](https://github.com/hyparam/hyparquet) parquet parsing library.
+
+The library exports a loader function `snappyUncompressor()` which loads the WASM module once, and returns a pre-loaded version of `snappyUncompress` function.
+
+To use hysnappy with hyparquet:
+
+```js
+import { parquetRead } from 'hyparquet'
+import { snappyUncompressor } from 'hysnappy'
+
+parquetRead({ file, compressors: {
+  SNAPPY: snappyUncompressor(),
+}})
+```
+
 ## Development
 
-Run `make` to build from source.
+The build uses clang _without_ emscripten, in order to produce the smallest possible binary.
 
-Compiles from `snappy.c` to `hysnappy.wasm` using `clang`.
-Then encodes `hysnappy.wasm` as base64 to `hysnappy.wasm.base64`, and inserts the base64 string into `hysnappy.js` for distribution.
+Run `make` to build from source. The build process consists of:
+
+1. Compile from `snappy.c` to `hysnappy.wasm` using `clang`.
+2. Encode `hysnappy.wasm` as base64 to `hysnappy.wasm.base64`.
+3. Insert base64 string into `hysnappy.js` for distribution.
+
+## WASM Loading
+
+By keeping `hysnappy.wasm` under 4kb, we can include it directly in the `hysnappy.js` file and load the WASM blob synchronously, which is faster than loading a separate `.wasm` file.
 
 ## References
 
