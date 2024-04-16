@@ -17,6 +17,9 @@ For example, snappy is the default compression format for [Apache Parquet](https
 
 ## Usage
 
+The `snappyUncompress` function expects as arguments: a typed array `compressed`, and an `outputLength` parameter.
+The length is needed to know how much wasm memory to allocate.
+For formats like parquet, this length will generally be known in advance.
 To decompress a `Uint8Array` with known output length:
 
 ```js
@@ -58,7 +61,7 @@ Run `make` to build from source. The build process consists of:
 
 ## WASM Loading
 
-By keeping `hysnappy.wasm` under 4kb, we can include it directly in the `hysnappy.js` file and load the WASM blob synchronously, which is faster than loading a separate `.wasm` file.
+By keeping `hysnappy.wasm` under 4kb, we can include it directly in the `hysnappy.js` file and load the WASM blob synchronously, which is faster than loading a separate `.wasm` file. [[web.dev]](https://web.dev/articles/loading-wasm)
 
 ## References
 
@@ -66,3 +69,4 @@ By keeping `hysnappy.wasm` under 4kb, we can include it directly in the `hysnapp
  - https://github.com/andikleen/snappy-c
  - https://github.com/google/snappy
  - https://github.com/zhipeng-jia/snappyjs
+ - https://web.dev/articles/loading-wasm
