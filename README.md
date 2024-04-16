@@ -60,6 +60,16 @@ Run `make` to build from source. The build process consists of:
 
 By keeping `hysnappy.wasm` under 4kb, we can include it directly in the `hysnappy.js` file and load the WASM blob synchronously, which is faster than loading a separate `.wasm` file.
 
+## Performance
+
+The goal of this library is maximum speed.
+Hysnappy uses WASM simd 128-bit vector operations for improved throughput using `clang -msimd128`.
+To run a speed test:
+
+```sh
+node benchmark.js
+```
+
 ## References
 
  - https://en.wikipedia.org/wiki/Snappy_(compression)

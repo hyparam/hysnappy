@@ -5,7 +5,7 @@ hyspappy.wasm.base64: hysnappy.wasm
 
 hysnappy.wasm: snappy.c
 	clang --target=wasm32 \
-		-O3 \
+		-O3 -msimd128 \
 		-nostdlib \
 		-Wl,--export-all \
 		-Wl,--no-entry \
