@@ -36,7 +36,7 @@ const output = snappyUncompress(compressed, outputLength)
 
 Hysnappy was built specifically to accelerate the the [hyparquet](https://github.com/hyparam/hyparquet) parquet parsing library.
 
-The library exports a loader function `snappyUncompressor()` which loads the WASM module once, and returns a pre-loaded version of `snappyUncompress` function.
+Hysnappy exports a loader function `snappyUncompressor()` which loads the WASM module once, and returns a pre-loaded version of `snappyUncompress` function.
 
 To use hysnappy with hyparquet:
 
