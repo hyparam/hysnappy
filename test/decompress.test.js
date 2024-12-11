@@ -52,6 +52,7 @@ describe('snappy uncompress', () => {
   })
 
   it('decompress test jpg', () => {
+    // Use snappyjs to compress hysnappy.jpg
     const compressed = fs.readFileSync('test/files/hysnappy.jpg.snappy')
     const expected = fs.readFileSync('hysnappy.jpg')
     const output = snappyUncompress(compressed, expected.length)

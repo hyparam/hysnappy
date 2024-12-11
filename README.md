@@ -3,36 +3,41 @@
 ![hysnappy penguin](hysnappy.jpg)
 
 [![npm](https://img.shields.io/npm/v/hysnappy)](https://www.npmjs.com/package/hysnappy)
+[![minzipped](https://img.shields.io/bundlephobia/minzip/hysnappy)](https://www.npmjs.com/package/hysnappy)
 [![workflow status](https://github.com/hyparam/hysnappy/actions/workflows/ci.yml/badge.svg)](https://github.com/hyparam/hysnappy/actions)
-[![mit license](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![mit license](https://img.shields.io/badge/License-MIT-orange.svg)](https://opensource.org/licenses/MIT)
 [![dependencies](https://img.shields.io/badge/Dependencies-0-blueviolet)](https://www.npmjs.com/package/hysnappy?activeTab=dependencies)
 
-Snappy decompression with WebAssembly.
+**HySnappy** is a lightweight, high-performance Snappy decompression library compiled to WebAssembly. It provides:
+- Very fast Snappy decompression suitable for web and Node.js environments.
+- A minimal footprint with no external dependencies.
+- Seamless integration with tools like [Hyparquet](https://github.com/hyparam/hyparquet).
 
-A fast, minimal snappy decompression implementation in C built for WASM.
 
-Snappy compression was released by Google in 2011 with the goal of very high speeds and reasonable compression.
-Snappy is used in various applications.
-For example, snappy is the default compression format for [Apache Parquet](https://parquet.apache.org) files.
+The Snappy compression format, originally released by Google, is designed for high-speed and reasonable compression ratios. HySnappy leverages these strengths by providing a WebAssembly build that can be included directly in your JavaScript bundle for optimal performance.
 
 ## Usage
 
-The `snappyUncompress` function expects as arguments: a typed array `compressed`, and an `outputLength` parameter.
+The `snappyUncompress` function requires arguments:
+ - `compressed`: a `Uint8Array` with compressed data.
+ - `outputLength`: the uncompressed size of the data.
+
 The length is needed to know how much wasm memory to allocate.
 For formats like parquet, this length will generally be known in advance.
+
 To decompress a `Uint8Array` with known output length:
 
-```js
-import { snappyUncompress } from 'hysnappy'
+```javascript
+const { snappyUncompress } = await import('hysnappy')
 
 const compressed = new Uint8Array([
   0x0a, 0x24, 0x68, 0x79, 0x70, 0x65, 0x72, 0x70, 0x61, 0x72, 0x61, 0x6d
 ])
 const outputLength = 10
-const output = snappyUncompress(compressed, outputLength)
+const output = snappyUncompress(compressed, outputLength) // hyperparam
 ```
 
-## Hyparquet
+## Hyparquet Integration
 
 Hysnappy was built specifically to accelerate the the [hyparquet](https://github.com/hyparam/hyparquet) parquet parsing library.
 
@@ -40,14 +45,19 @@ Hysnappy exports a loader function `snappyUncompressor()` which loads the WASM m
 
 To use hysnappy with hyparquet:
 
-```js
-import { parquetRead } from 'hyparquet'
+```javascript
+import { parquetQuery } from 'hyparquet'
 import { snappyUncompressor } from 'hysnappy'
 
-parquetRead({ file, compressors: {
-  SNAPPY: snappyUncompressor(),
-}})
+await parquetQuery({
+  file,
+  compressors: {
+    SNAPPY: snappyUncompressor(),
+  },
+})
 ```
+
+Alternatively, check out [hyparquet-compressors](https://github.com/hyparam/hyparquet-compressors) which includes hysnappy decompression.
 
 ## Development
 
