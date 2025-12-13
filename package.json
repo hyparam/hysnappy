@@ -1,6 +1,6 @@
 {
   "name": "hysnappy",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "snappy decompressor for wasm",
   "author": "Hyperparam",
   "homepage": "https://hyperparam.app",
@@ -22,8 +22,7 @@
     "url": "git+https://github.com/hyparam/hysnappy.git"
   },
   "files": [
-    "js/index.d.ts",
-    "js/index.js"
+    "js"
   ],
   "type": "module",
   "types": "js/index.d.ts",

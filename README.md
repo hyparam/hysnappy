@@ -9,7 +9,7 @@
 [![dependencies](https://img.shields.io/badge/Dependencies-0-blueviolet)](https://www.npmjs.com/package/hysnappy?activeTab=dependencies)
 
 **HySnappy** is a lightweight, high-performance Snappy decompression library compiled to WebAssembly. It provides:
-- Very fast Snappy decompression suitable for web and Node.js environments.
+- Very fast Snappy compression suitable for web and Node.js environments.
 - A minimal footprint with no external dependencies.
 - Seamless integration with tools like [Hyparquet](https://github.com/hyparam/hyparquet).
 
@@ -17,6 +17,8 @@
 The Snappy compression format, originally released by Google, is designed for high-speed and reasonable compression ratios. HySnappy leverages these strengths by providing a WebAssembly build that can be included directly in your JavaScript bundle for optimal performance.
 
 ## Usage
+
+### Decompress Snappy Data
 
 The `snappyUncompress` function requires arguments:
  - `compressed`: a `Uint8Array` with compressed data.
@@ -35,6 +37,19 @@ const compressed = new Uint8Array([
 ])
 const outputLength = 10
 const output = snappyUncompress(compressed, outputLength) // hyperparam
+```
+
+### Compress Snappy Data
+
+Use the `snappyCompress` function to compress a `Uint8Array`:
+
+```javascript
+const { snappyCompress } = await import('hysnappy')
+
+const input = new Uint8Array([
+  0x68, 0x79, 0x70, 0x61, 0x72, 0x61, 0x6d
+])
+const compressed = snappyCompress(input)
 ```
 
 ## Hyparquet Integration
@@ -65,13 +80,13 @@ The build uses clang _without_ emscripten, in order to produce the smallest poss
 
 Run `make` to build from source. The build process consists of:
 
-1. Compile from `snappy.c` to `hysnappy.wasm` using `clang`.
-2. Encode `hysnappy.wasm` as base64 to `hysnappy.wasm.base64`.
-3. Insert base64 string into `hysnappy.js` for distribution.
+1. Compile from c to wasm using `clang`.
+2. Encode wasm as base64 to `uncompress.wasm.base64` and `compress.wasm.base64`.
+3. Insert base64 strings into `uncompress.js` and `compress.js` for distribution.
 
 ## WASM Loading
 
-By keeping `hysnappy.wasm` under 4kb, we can include it directly in the `hysnappy.js` file and load the WASM blob synchronously, which is faster than loading a separate `.wasm` file. [[web.dev]](https://web.dev/articles/loading-wasm)
+By keeping wasm files under 4kb, we can include it directly in the javascript files and load the WASM blob synchronously, which is faster than loading a separate `.wasm` file. [[web.dev]](https://web.dev/articles/loading-wasm)
 
 ## References
 
