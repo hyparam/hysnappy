@@ -2,6 +2,8 @@
   "name": "hysnappy",
   "version": "1.0.0",
   "description": "snappy decompressor for wasm",
+  "author": "Hyperparam",
+  "homepage": "https://hyperparam.app",
   "keywords": [
     "snappy",
     "codec",
@@ -19,25 +21,27 @@
     "type": "git",
     "url": "git+https://github.com/hyparam/hysnappy.git"
   },
-  "main": "hysnappy.js",
   "files": [
-    "hysnappy.d.ts",
-    "hysnappy.js"
+    "js/index.d.ts",
+    "js/index.js"
   ],
   "type": "module",
-  "types": "hysnappy.d.ts",
+  "types": "js/index.d.ts",
+  "main": "js/index.js",
+  "sideEffects": false,
   "scripts": {
     "coverage": "vitest run --coverage",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@types/node": "22.10.1",
-    "@vitest/coverage-v8": "2.1.8",
-    "eslint": "9.16.0",
-    "eslint-plugin-jsdoc": "50.6.1",
+    "@types/node": "24.10.2",
+    "@vitest/coverage-v8": "4.0.15",
+    "eslint": "9.39.2",
+    "eslint-plugin-jsdoc": "61.5.0",
     "snappyjs": "0.7.0",
-    "typescript": "5.7.2",
-    "vitest": "2.1.8"
+    "typescript": "5.9.3",
+    "vitest": "4.0.15"
   }
 }

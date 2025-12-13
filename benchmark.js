@@ -1,6 +1,6 @@
 
 import { compress } from 'snappyjs'
-import { snappyUncompressor } from './hysnappy.js'
+import { snappyUncompressor } from './js/uncompress.js'
 
 const fileSize = 200_000_000
 

@@ -1,18 +1,31 @@
+# Detect platform
+UNAME := $(shell uname -s)
 
-hyspappy.wasm.base64: hysnappy.wasm
-	base64 -w 0 hysnappy.wasm > hysnappy.wasm.base64
-	sed -i 's|const wasm64 = .*|const wasm64 = '"'`cat hysnappy.wasm.base64`'"'|' hysnappy.js
+# macos with llvm from homebrew
+ifeq ($(UNAME),Darwin)
+    CLANG = /opt/homebrew/opt/llvm/bin/clang
+    SED_INPLACE = sed -i ''
+    BASE64 = base64 -i uncompress.wasm -o uncompress.wasm.base64
+else
+    CLANG = clang
+    SED_INPLACE = sed -i
+    BASE64 = base64 -w 0 uncompress.wasm > uncompress.wasm.base64
+endif
 
-hysnappy.wasm: snappy.c
-	clang --target=wasm32 \
+uncompress.wasm.base64: uncompress.wasm
+	$(BASE64)
+	$(SED_INPLACE) 's|const wasm64 = .*|const wasm64 = '"'`cat uncompress.wasm.base64`'"'|' js/uncompress.js
+
+uncompress.wasm: c/uncompress.c
+	$(CLANG) --target=wasm32 \
 		-O3 \
 		-nostdlib \
 		-Wl,--export-all \
 		-Wl,--no-entry \
-		-o hysnappy.wasm snappy.c
+		-o uncompress.wasm c/uncompress.c
 
-main: main.c snappy.c
-	clang -g -o main main.c snappy.c
+main: c/main.c c/uncompress.c
+	$(CLANG) -g -o main c/main.c c/uncompress.c
 
 clean:
-	rm -f main hysnappy.wasm hysnappy.wasm.base64
+	rm -f main uncompress.wasm uncompress.wasm.base64

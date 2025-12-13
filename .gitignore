@@ -2,7 +2,8 @@
 coverage
 node_modules
 package-lock.json
-hysnappy.wasm
-hysnappy.wasm.base64
+*.wasm
+*.wasm.base64
 main
+main.dSYM
 *.tgz
