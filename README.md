@@ -8,8 +8,8 @@
 [![mit license](https://img.shields.io/badge/License-MIT-orange.svg)](https://opensource.org/licenses/MIT)
 [![dependencies](https://img.shields.io/badge/Dependencies-0-blueviolet)](https://www.npmjs.com/package/hysnappy?activeTab=dependencies)
 
-**HySnappy** is a lightweight, high-performance Snappy decompression library compiled to WebAssembly. It provides:
-- Very fast Snappy compression suitable for web and Node.js environments.
+**HySnappy** is a lightweight, high-performance Snappy compression/decompression library compiled to WebAssembly. It provides:
+- Very fast Snappy compression/decompression suitable for web and Node.js environments.
 - A minimal footprint with no external dependencies.
 - Seamless integration with tools like [Hyparquet](https://github.com/hyparam/hyparquet).
 
@@ -54,7 +54,7 @@ const compressed = snappyCompress(input)
 
 ## Hyparquet Integration
 
-Hysnappy was built specifically to accelerate the the [hyparquet](https://github.com/hyparam/hyparquet) parquet parsing library.
+Hysnappy was built specifically to accelerate the [hyparquet](https://github.com/hyparam/hyparquet) parquet parsing library.
 
 Hysnappy exports a loader function `snappyUncompressor()` which loads the WASM module once, and returns a pre-loaded version of `snappyUncompress` function.
 
@@ -73,6 +73,8 @@ await parquetQuery({
 ```
 
 Alternatively, check out [hyparquet-compressors](https://github.com/hyparam/hyparquet-compressors) which includes hysnappy decompression.
+
+Hysnappy can also be used to accelerate compression in the [hyparquet-writer](https://github.com/hyparam/hyparquet-writer) library (read the [advanced usage section](https://github.com/hyparam/hyparquet-writer#advanced-usage) for details).
 
 ## Development
 
