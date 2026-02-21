@@ -43,10 +43,21 @@ static int emit_literal(unsigned char *op, const unsigned char *literal, uint32_
 	} else if (len < 256) {
 		*op++ = (60 << 2);
 		*op++ = len - 1;
-	} else {
+	} else if (len <= 65536) {
 		*op++ = (61 << 2);
 		*op++ = (len - 1) & 0xff;
 		*op++ = ((len - 1) >> 8) & 0xff;
+	} else if (len <= 16777216) {
+		*op++ = (62 << 2);
+		*op++ = (len - 1) & 0xff;
+		*op++ = ((len - 1) >> 8) & 0xff;
+		*op++ = ((len - 1) >> 16) & 0xff;
+	} else {
+		*op++ = (63 << 2);
+		*op++ = (len - 1) & 0xff;
+		*op++ = ((len - 1) >> 8) & 0xff;
+		*op++ = ((len - 1) >> 16) & 0xff;
+		*op++ = ((len - 1) >> 24) & 0xff;
 	}
 	memcpy(op, literal, len);
 	return (op - start) + len;
